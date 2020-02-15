@@ -149,15 +149,12 @@ def create_image(current_notes, time, time_left, time_right):
         note_pos_y_offset = -0.5 * (row_height - note_height) * 2.0
 
         pitch = note.pitch
-        track_no = note.track
         row_no = pitch - minimum_pitch
-        # row_no = settings.all_pitches.index(pitch) # was used for fractions
         y_pos = resolution_y - y_offset - (row_no + 1) * row_height - note_pos_y_offset
         x_pos = (note.start_time - time_left) * pixels_per_second
         x_length = (note.end_time - note.start_time) * pixels_per_second - x_length_ausgleich
 
 
-        # dwg.add( dwg.rect(insert=(x_pos, y_pos), size=(x_length, note_height), fill=color, rx=corner_length, ry=corner_length)  )
         x_pos = int(round(x_pos))
         y_pos = int(round(y_pos))
         x_length = int(round(x_length))
