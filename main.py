@@ -4,6 +4,8 @@ import subprocess
 import sys
 import shutil
 import os
+import argparse
+import configparser
 
 import midi
 import note
@@ -55,23 +57,6 @@ def calculate_note_times(note_tracks, tempo_bpm, resolution):
                 n.calculate_start_and_end_time(tempo_bpm, resolution)
 
 
-def delete_and_create_folders():
-    foldernames = ["./output", "./temp_images"]
-    for f in foldernames:
-        if os.path.isdir(f):
-            shutil.rmtree(f)
-        os.mkdir(f)
-
-
-def main():
-    delete_and_create_folders()
-
-    note_tracks, tempo_bpm, resolution = read_midi("test.mid")
-    calculate_note_times(note_tracks, tempo_bpm, resolution)
-    create_video(note_tracks)
-    shutil.rmtree("./temp_images")
-
-
 def get_maximum_time(note_tracks):
     maximum_time = -999999.9
     for t in note_tracks:
@@ -106,23 +91,17 @@ def print_progress(msg, current, total):
 
 
 
-def create_video(note_tracks):
-    resolution_x = 1920
-    resolution_y = 1080
-    frame_rate = 25.0
-    waiting_time_before_end = 5.0
-    start_time = -1.0
-    time_before_current = 4.0
-    time_after_current = 25.0
+def create_video(note_tracks, config):
+    frame_rate = float(config["frame_rate"])
+    waiting_time_before_end = float(config["waiting_time_before_end"])
+    start_time = float(config["start_time"])
+    time_before_current = float(config["time_before_current"])
+    time_after_current = float(config["time_after_current"])
 
     pitch_min, pitch_max = get_pitch_min_max(note_tracks)
-
-
-
     dt = 1.0 / frame_rate
     end_time = get_maximum_time(note_tracks) + waiting_time_before_end
     time = start_time
-
 
     current_note_indices = [ [0 for i in range(128)] for k in range(len(note_tracks))]
     img_index = 0
@@ -144,17 +123,19 @@ def create_video(note_tracks):
                     else:
                         break
 
-
-        img = create_image(current_notes, time, time_left, time_right, time_before_current, time_after_current, pitch_min, pitch_max)
+        img = create_image(current_notes, time, time_left, time_right, time_before_current, time_after_current, pitch_min, pitch_max, config)
         cv2.imwrite("./temp_images/%08i.png" % img_index, img)
         time += dt
         img_index += 1
         print_progress("Current time:", time, end_time)
     print("")
-    run_ffmpeg(frame_rate, resolution_x, resolution_y)
+
+    size_x = int(config["size_x"])
+    size_y = int(config["size_y"])
+    run_ffmpeg(frame_rate, size_x, size_y)
 
 
-def run_ffmpeg(frame_rate, resolution_x, resolution_y):
+def run_ffmpeg(frame_rate, size_x, size_y):
     call_list = []
     call_list.append("ffmpeg")
     call_list.append("-r")
@@ -162,7 +143,7 @@ def run_ffmpeg(frame_rate, resolution_x, resolution_y):
     call_list.append("-f")
     call_list.append("image2")
     call_list.append("-s")
-    call_list.append("{:d}x{:d}".format(resolution_x, resolution_y))
+    call_list.append("{:d}x{:d}".format(size_x, size_y))
     call_list.append("-i")
     call_list.append("./temp_images/%08d.png")
     call_list.append("-vcodec")
@@ -184,27 +165,34 @@ def create_empty_image(bg_color, size_x=1920, size_y=1080):
 
 
 
+def get_color_from_string(color_str):
+    """
+    This converts the colors from the options file
+    to a list of ints: [b,g,r].
+    """
+    return [int(c) for c in color_str.split(",")]
 
-def create_image(current_notes, time, time_left, time_right, time_before_current, time_after_current, pitch_min, pitch_max):
-    y_offset = 20
-    resolution_x = 1920
-    resolution_y = 1080
-    color_active = (204,153,255)
-    color_silent = (102,0,204)
-    bg_color = (0,0,0)
-    pixels_to_remove_from_notes_x = 4.0
-    pixels_to_remove_from_notes_y = 4.0
+
+def create_image(current_notes, time, time_left, time_right, time_before_current, time_after_current, pitch_min, pitch_max, config):
+    margin_y = int(config["margin_y"])
+    size_x = int(config["size_x"])
+    size_y = int(config["size_y"])
+    color_active = get_color_from_string(config["color_active"])
+    color_silent = get_color_from_string(config["color_silent"])
+    bg_color = get_color_from_string(config["bg_color"])
+    pixels_to_remove_from_notes_x = float(config["pixels_to_remove_from_notes_x"])
+    pixels_to_remove_from_notes_y = float(config["pixels_to_remove_from_notes_y"])
 
     img = create_empty_image(bg_color)
 
     no_of_rows = pitch_max - pitch_min + 1
-    row_height = (resolution_y - 2.0 * y_offset) / no_of_rows
-    pixels_per_second = resolution_x / (time_before_current + time_after_current)
+    row_height = (size_y - 2.0 * margin_y) / no_of_rows
+    pixels_per_second = size_x / (time_before_current + time_after_current)
     note_height = max(1, row_height - pixels_to_remove_from_notes_y)
     note_pos_y_offset = 0.5 * (row_height - note_height)
     for note in current_notes:
         row_no = note.pitch - pitch_min
-        y_pos = resolution_y - y_offset - (row_no + 1) * row_height + note_pos_y_offset
+        y_pos = size_y - margin_y - (row_no + 1) * row_height + note_pos_y_offset
         x_pos = (note.start_time - time_left) * pixels_per_second
         x_length = (note.end_time - note.start_time) * pixels_per_second - pixels_to_remove_from_notes_x
 
@@ -228,6 +216,44 @@ def is_note_active(note, time):
         return True
     else:
         return False
+
+
+
+def delete_and_create_folders():
+    foldernames = ["./output", "./temp_images"]
+    for f in foldernames:
+        if os.path.isdir(f):
+            shutil.rmtree(f)
+        os.mkdir(f)
+
+def get_config(filename):
+    """
+    All settings are stored in an external text file.
+    """
+    config = configparser.ConfigParser()
+    config.read(filename)
+    return config
+
+
+def main():
+    delete_and_create_folders()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--config",
+        required=False,
+        default="options.cfg",
+        help="path to program options file")
+    arguments = vars(parser.parse_args())
+    filename = arguments["config"]
+    config = get_config(filename)["DEFAULT"]
+
+    note_tracks, tempo_bpm, resolution = read_midi(config["midi_filename"])
+    calculate_note_times(note_tracks, tempo_bpm, resolution)
+    create_video(note_tracks, config)
+    shutil.rmtree("./temp_images")
+
+
 
 
 if __name__ == '__main__':
