@@ -99,12 +99,21 @@ def create_video(note_tracks, config):
     time_after_current = float(config["time_after_current"])
 
     pitch_min, pitch_max = get_pitch_min_max(note_tracks)
-    dt = 1.0 / frame_rate
-    end_time = get_maximum_time(note_tracks) + waiting_time_before_end
-    time = start_time
+    if config["pitch_min"] != "auto":
+        pitch_min = int(config["pitch_min"])
+    if config["pitch_max"] != "auto":
+        pitch_max = int(config["pitch_max"])
+
+
+    if config["end_time"] == "auto":
+        end_time = get_maximum_time(note_tracks) + waiting_time_before_end
+    else:
+        end_time = float(config["end_time"])
 
     current_note_indices = [ [0 for i in range(128)] for k in range(len(note_tracks))]
     img_index = 0
+    dt = 1.0 / frame_rate
+    time = start_time
     while time < end_time:
         time_left = time - time_before_current
         time_right = time + time_after_current
@@ -139,7 +148,7 @@ def run_ffmpeg(frame_rate, size_x, size_y):
     call_list = []
     call_list.append("ffmpeg")
     call_list.append("-r")
-    call_list.append("{:d}".format(frame_rate))
+    call_list.append("{:f}".format(frame_rate))
     call_list.append("-f")
     call_list.append("image2")
     call_list.append("-s")
