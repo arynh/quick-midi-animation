@@ -220,26 +220,21 @@ def create_image(current_notes, time, time_left, time_right, time_before_current
     pixels_to_remove_from_notes_x = float(config["pixels_to_remove_from_notes_x"])
     pixels_to_remove_from_notes_y = float(config["pixels_to_remove_from_notes_y"])
 
-    img = create_empty_image(bg_color)
-
     no_of_rows = pitch_max - pitch_min + 1
     row_height = (size_y - 2.0 * margin_y) / no_of_rows
     pixels_per_second = size_x / (time_before_current + time_after_current)
-    note_height = max(1, row_height - pixels_to_remove_from_notes_y)
+    note_height = int(round(max(1, row_height - pixels_to_remove_from_notes_y)))
     note_pos_y_offset = 0.5 * (row_height - note_height)
+
+    img = create_empty_image(bg_color)
     for note in current_notes:
         row_no = note.pitch - pitch_min
-        y_pos = size_y - margin_y - (row_no + 1) * row_height + note_pos_y_offset
-        x_pos = (note.start_time - time_left) * pixels_per_second
-        x_length = (note.end_time - note.start_time) * pixels_per_second - pixels_to_remove_from_notes_x
+        y_pos = int(round(size_y - margin_y - (row_no + 1) * row_height + note_pos_y_offset))
+        x_pos = int(round((note.start_time - time_left) * pixels_per_second))
+        x_length = int(round((note.end_time - note.start_time) * pixels_per_second - pixels_to_remove_from_notes_x))
 
-        x_pos = int(round(x_pos))
-        y_pos = int(round(y_pos))
-        x_length = int(round(x_length))
-        note_height = int(round(note_height))
         p1 = (x_pos,y_pos)
         p2 = (x_pos+x_length,y_pos+note_height)
-
         if is_note_active(note, time):
             note_color = color_active
         else:
