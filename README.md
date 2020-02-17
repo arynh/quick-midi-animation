@@ -1,6 +1,6 @@
 # quick-midi-animation
 Convert a MIDI file into a piano-roll animation.
-An example can be found in my [YouTube video](#).
+An example can be found in my [YouTube video](https://www.youtube.com/watch?v=gGqrVAe0_Ek&feature=youtu.be).
 
 ## Requirements
 * The MIDI file should not contain any changes of the global tempo parameter.
