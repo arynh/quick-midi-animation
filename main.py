@@ -11,6 +11,12 @@ import midi
 import note
 
 def is_note_on(event):
+    """
+    Sometimes Note Offs are marked by
+    event.name = "Note On" and velocity = 0.
+    That's why we have to check both event.name and
+    velocity.
+    """
     velocity = event.data[1]
     return event.name == "Note On" and velocity > 0
 
@@ -51,6 +57,11 @@ def read_midi(filename):
     return note_tracks, tempo_bpm, resolution
 
 def calculate_note_times(note_tracks, tempo_bpm, resolution):
+    """
+    Calculate start_time and end_time for all notes.
+    This only works if the MIDI file does not contain
+    any tempo changes.
+    """
     for t in note_tracks:
         for pl in t:
             for n in pl:
@@ -58,6 +69,11 @@ def calculate_note_times(note_tracks, tempo_bpm, resolution):
 
 
 def get_maximum_time(note_tracks):
+    """
+    Determines the largest value of end_time
+    among all notes. This is required to know
+    when the video should end.
+    """
     maximum_time = -999999.9
     for t in note_tracks:
         for pitch_list in t:
@@ -68,6 +84,11 @@ def get_maximum_time(note_tracks):
 
 
 def get_pitch_min_max(note_tracks):
+    """
+    In order not to waste space,
+    we may want to know in advance what the highest and lowest
+    pitches of the MIDI notes are.
+    """
     pitch_min = 128
     pitch_max = 0
     for t in note_tracks:
