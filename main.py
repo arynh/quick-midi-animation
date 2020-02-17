@@ -156,7 +156,7 @@ def create_video(note_tracks, config):
 
         img = create_image(current_notes, time, time_left, time_right, time_before_current,
                             time_after_current, pitch_min, pitch_max, config)
-        cv2.imwrite("./temp_images/%08i.png" % img_index, img)
+        cv2.imwrite("./tmp_images/%08i.png" % img_index, img)
         time += dt
         img_index += 1
         print_progress("Current time:", time, end_time)
@@ -180,7 +180,7 @@ def run_ffmpeg(frame_rate, size_x, size_y):
     call_list.append("-s")
     call_list.append("{:d}x{:d}".format(size_x, size_y))
     call_list.append("-i")
-    call_list.append("./temp_images/%08d.png")
+    call_list.append("./tmp_images/%08d.png")
     call_list.append("-vcodec")
     call_list.append("libx264")
     call_list.append("-crf")
