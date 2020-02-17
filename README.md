@@ -11,4 +11,5 @@ Otherwise, the animation will be out of sync.
 
 ## Usage
 * The most important parameters are defined in options.cfg. The path to your MIDI must be provided here.
-* Run `python main.py`
+* Run `python main.py` (loads options.cfg)
+or `python main.py -c path_to_options_file`.
