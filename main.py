@@ -229,7 +229,7 @@ def is_note_active(note, time):
 
 
 def delete_and_create_folders():
-    foldernames = ["./output", "./temp_images"]
+    foldernames = ["./output", "./tmp_images"]
     for f in foldernames:
         if os.path.isdir(f):
             shutil.rmtree(f)
@@ -260,7 +260,7 @@ def main():
     note_tracks, tempo_bpm, resolution = read_midi(config["midi_filename"])
     calculate_note_times(note_tracks, tempo_bpm, resolution)
     create_video(note_tracks, config)
-    shutil.rmtree("./temp_images")
+    shutil.rmtree("./tmp_images")
 
 
 
