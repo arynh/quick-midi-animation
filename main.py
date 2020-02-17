@@ -125,7 +125,6 @@ def create_video(note_tracks, config):
     if config["pitch_max"] != "auto":
         pitch_max = int(config["pitch_max"])
 
-
     if config["end_time"] == "auto":
         end_time = get_maximum_time(note_tracks) + waiting_time_before_end
     else:
