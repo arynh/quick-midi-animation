@@ -18,7 +18,7 @@ def is_note_on(event):
 def read_midi(filename):
     """
     Returns a list of tracks.
-    Each track is list containing 128 lists of notes.
+    Each track is a list containing 128 lists of notes.
     """
     midi_tracks = midi.read_midifile(filename)
     resolution = midi_tracks.resolution
