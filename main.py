@@ -154,8 +154,8 @@ def create_video(note_tracks, config):
                     else:
                         break
 
-        img = create_image(current_notes, time, time_left, time_right,
-                           time_before_current, time_after_current, pitch_min, pitch_max, config)
+        img = create_image(current_notes, time, time_left, time_right, time_before_current,
+                            time_after_current, pitch_min, pitch_max, config)
         cv2.imwrite("./temp_images/%08i.png" % img_index, img)
         time += dt
         img_index += 1
