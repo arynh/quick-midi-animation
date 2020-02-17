@@ -260,6 +260,9 @@ def is_note_active(note, time):
 
 
 def delete_and_create_folders():
+    """
+    Clean everything up first.
+    """
     foldernames = ["./output", "./tmp_images"]
     for f in foldernames:
         if os.path.isdir(f):
