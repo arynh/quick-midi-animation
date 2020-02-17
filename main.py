@@ -10,6 +10,7 @@ import configparser
 import midi
 import note
 
+
 def is_note_on(event):
     """
     Sometimes Note Offs are marked by
@@ -55,6 +56,7 @@ def read_midi(filename):
                 tempo_bpm = elem.get_bpm()
         note_tracks.append(notes_pitchwise)
     return note_tracks, tempo_bpm, resolution
+
 
 def calculate_note_times(note_tracks, tempo_bpm, resolution):
     """
@@ -111,7 +113,6 @@ def print_progress(msg, current, total):
     sys.stdout.flush()
 
 
-
 def create_video(note_tracks, config):
     frame_rate = float(config["frame_rate"])
     waiting_time_before_end = float(config["waiting_time_before_end"])
@@ -130,7 +131,8 @@ def create_video(note_tracks, config):
     else:
         end_time = float(config["end_time"])
 
-    current_note_indices = [ [0 for i in range(128)] for k in range(len(note_tracks))]
+    current_note_indices = [
+        [0 for i in range(128)] for k in range(len(note_tracks))]
     img_index = 0
     dt = 1.0 / frame_rate
     time = start_time
@@ -152,7 +154,8 @@ def create_video(note_tracks, config):
                     else:
                         break
 
-        img = create_image(current_notes, time, time_left, time_right, time_before_current, time_after_current, pitch_min, pitch_max, config)
+        img = create_image(current_notes, time, time_left, time_right,
+                           time_before_current, time_after_current, pitch_min, pitch_max, config)
         cv2.imwrite("./temp_images/%08i.png" % img_index, img)
         time += dt
         img_index += 1
@@ -192,9 +195,9 @@ def create_empty_image(bg_color, size_x=1920, size_y=1080):
     """
     This returns the array on which will be drawn.
     """
-    img = np.array(bg_color, dtype=np.uint8) * np.ones((size_y,size_x,3), dtype=np.uint8)* np.ones((size_y, size_x,1), dtype=np.uint8)
+    img = np.array(bg_color, dtype=np.uint8) * np.ones((size_y, size_x, 3),
+                                                       dtype=np.uint8) * np.ones((size_y, size_x, 1), dtype=np.uint8)
     return img
-
 
 
 def get_color_from_string(color_str):
@@ -205,7 +208,8 @@ def get_color_from_string(color_str):
     return [int(c) for c in color_str.split(",")]
 
 
-def create_image(current_notes, time, time_left, time_right, time_before_current, time_after_current, pitch_min, pitch_max, config):
+def create_image(current_notes, time, time_left, time_right,
+                 time_before_current, time_after_current, pitch_min, pitch_max, config):
     """
     For each frame, this function is called.
     The notes which appear in this image (current_notes) have
@@ -217,29 +221,34 @@ def create_image(current_notes, time, time_left, time_right, time_before_current
     color_active = get_color_from_string(config["color_active"])
     color_silent = get_color_from_string(config["color_silent"])
     bg_color = get_color_from_string(config["bg_color"])
-    pixels_to_remove_from_notes_x = float(config["pixels_to_remove_from_notes_x"])
-    pixels_to_remove_from_notes_y = float(config["pixels_to_remove_from_notes_y"])
+    pixels_to_remove_from_notes_x = float(
+        config["pixels_to_remove_from_notes_x"])
+    pixels_to_remove_from_notes_y = float(
+        config["pixels_to_remove_from_notes_y"])
 
     no_of_rows = pitch_max - pitch_min + 1
     row_height = (size_y - 2.0 * margin_y) / no_of_rows
     pixels_per_second = size_x / (time_before_current + time_after_current)
-    note_height = int(round(max(1, row_height - pixels_to_remove_from_notes_y)))
+    note_height = int(
+        round(max(1, row_height - pixels_to_remove_from_notes_y)))
     note_pos_y_offset = 0.5 * (row_height - note_height)
 
     img = create_empty_image(bg_color)
     for note in current_notes:
         row_no = note.pitch - pitch_min
-        y_pos = int(round(size_y - margin_y - (row_no + 1) * row_height + note_pos_y_offset))
+        y_pos = int(round(size_y - margin_y - (row_no + 1)
+                          * row_height + note_pos_y_offset))
         x_pos = int(round((note.start_time - time_left) * pixels_per_second))
-        x_length = int(round((note.end_time - note.start_time) * pixels_per_second - pixels_to_remove_from_notes_x))
+        x_length = int(round((note.end_time - note.start_time)
+                             * pixels_per_second - pixels_to_remove_from_notes_x))
 
-        p1 = (x_pos,y_pos)
-        p2 = (x_pos+x_length,y_pos+note_height)
+        p1 = (x_pos, y_pos)
+        p2 = (x_pos + x_length, y_pos + note_height)
         if is_note_active(note, time):
             note_color = color_active
         else:
             note_color = color_silent
-        cv2.rectangle(img,p1,p2,note_color,-1)
+        cv2.rectangle(img, p1, p2, note_color, -1)
     return img
 
 
@@ -253,7 +262,6 @@ def is_note_active(note, time):
         return False
 
 
-
 def delete_and_create_folders():
     """
     Clean everything up first.
@@ -263,6 +271,7 @@ def delete_and_create_folders():
         if os.path.isdir(f):
             shutil.rmtree(f)
         os.mkdir(f)
+
 
 def get_config(filename):
     """
