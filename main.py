@@ -165,6 +165,9 @@ def create_video(note_tracks, config):
 
 
 def run_ffmpeg(frame_rate, size_x, size_y):
+    """
+    Convert all images into a video.
+    """
     call_list = []
     call_list.append("ffmpeg")
     call_list.append("-r")
@@ -203,6 +206,11 @@ def get_color_from_string(color_str):
 
 
 def create_image(current_notes, time, time_left, time_right, time_before_current, time_after_current, pitch_min, pitch_max, config):
+    """
+    For each frame, this function is called.
+    The notes which appear in this image (current_notes) have
+    already been selected.
+    """
     margin_y = int(config["margin_y"])
     size_x = int(config["size_x"])
     size_y = int(config["size_y"])
@@ -241,6 +249,9 @@ def create_image(current_notes, time, time_left, time_right, time_before_current
 
 
 def is_note_active(note, time):
+    """
+    Notes that are currently playing may be treated differently.
+    """
     if note.start_time < time and note.end_time >= time:
         return True
     else:
