@@ -195,8 +195,9 @@ def create_empty_image(bg_color, size_x=1920, size_y=1080):
     """
     This returns the array on which will be drawn.
     """
-    img = np.array(bg_color, dtype=np.uint8) * np.ones((size_y, size_x, 3),
-                                                       dtype=np.uint8) * np.ones((size_y, size_x, 1), dtype=np.uint8)
+    bg = np.array(bg_color, dtype=np.uint8)
+    img = bg * np.ones((size_y, size_x, 3),
+            dtype=np.uint8) * np.ones((size_y, size_x, 1), dtype=np.uint8)
     return img
 
 
@@ -208,8 +209,8 @@ def get_color_from_string(color_str):
     return [int(c) for c in color_str.split(",")]
 
 
-def create_image(current_notes, time, time_left, time_right,
-                 time_before_current, time_after_current, pitch_min, pitch_max, config):
+def create_image(current_notes, time, time_left, time_right, time_before_current,
+                    time_after_current, pitch_min, pitch_max, config):
     """
     For each frame, this function is called.
     The notes which appear in this image (current_notes) have
