@@ -292,7 +292,5 @@ def main():
     shutil.rmtree("./tmp_images")
 
 
-
-
 if __name__ == '__main__':
     main()
