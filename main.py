@@ -234,7 +234,7 @@ def create_image(current_notes, time, time_left, time_right, time_before_current
         round(max(1, row_height - pixels_to_remove_from_notes_y)))
     note_pos_y_offset = 0.5 * (row_height - note_height)
 
-    img = create_empty_image(bg_color)
+    img = create_empty_image(bg_color, size_x, size_y)
     for note in current_notes:
         row_no = note.pitch - pitch_min
         y_pos = int(round(size_y - margin_y - (row_no + 1)
