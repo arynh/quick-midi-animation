@@ -6,6 +6,7 @@ import shutil
 import os
 import argparse
 import configparser
+import asyncio
 
 import midi
 import note
@@ -43,7 +44,8 @@ def read_midi(filename):
                         velocity=elem.data[1],
                         pitch=pitch,
                         start_ticks=total_ticks,
-                        track=t_index)
+                        track=t_index,
+                    )
                     notes_pitchwise[pitch].append(n)
                 else:
                     for n in reversed(notes_pitchwise[pitch]):
@@ -113,7 +115,7 @@ def print_progress(msg, current, total):
     sys.stdout.flush()
 
 
-def create_video(note_tracks, config):
+async def create_video(note_tracks, config):
     frame_rate = float(config["frame_rate"])
     waiting_time_before_end = float(config["waiting_time_before_end"])
     start_time = float(config["start_time"])
@@ -131,11 +133,11 @@ def create_video(note_tracks, config):
     else:
         end_time = float(config["end_time"])
 
-    current_note_indices = [
-        [0 for i in range(128)] for k in range(len(note_tracks))]
+    current_note_indices = [[0 for i in range(128)] for k in range(len(note_tracks))]
     img_index = 0
     dt = 1.0 / frame_rate
     time = start_time
+    tasks = []
     while time < end_time:
         time_left = time - time_before_current
         time_right = time + time_after_current
@@ -154,17 +156,33 @@ def create_video(note_tracks, config):
                     else:
                         break
 
-        img = create_image(current_notes, time, time_left, time_right, time_before_current,
-                            time_after_current, pitch_min, pitch_max, config)
-        cv2.imwrite("./tmp_images/%08i.png" % img_index, img)
+        img = create_image(
+            current_notes,
+            time,
+            time_left,
+            time_before_current,
+            time_after_current,
+            pitch_min,
+            pitch_max,
+            config,
+        )
+        tasks.append(asyncio.create_task(write_image(img, img_index)))
         time += dt
         img_index += 1
         print_progress("Current time:", time, end_time)
     print("")
 
+    print("joining . . . ")
+    for task in tasks:
+        await task
+
     size_x = int(config["size_x"])
     size_y = int(config["size_y"])
     run_ffmpeg(frame_rate, size_x, size_y)
+
+
+async def write_image(img, img_index):
+    cv2.imwrite("./tmp_images/%08i.png" % img_index, img)
 
 
 def run_ffmpeg(frame_rate, size_x, size_y):
@@ -184,7 +202,7 @@ def run_ffmpeg(frame_rate, size_x, size_y):
     call_list.append("-vcodec")
     call_list.append("libx264")
     call_list.append("-crf")
-    call_list.append("25")
+    call_list.append("18")
     call_list.append("-pix_fmt")
     call_list.append("yuv420p")
     call_list.append("./output/final.mp4")
@@ -196,8 +214,11 @@ def create_empty_image(bg_color, size_x=1920, size_y=1080):
     This returns the array on which will be drawn.
     """
     bg = np.array(bg_color, dtype=np.uint8)
-    img = bg * np.ones((size_y, size_x, 3),
-            dtype=np.uint8) * np.ones((size_y, size_x, 1), dtype=np.uint8)
+    img = (
+        bg
+        * np.ones((size_y, size_x, 3), dtype=np.uint8)
+        * np.ones((size_y, size_x, 1), dtype=np.uint8)
+    )
     return img
 
 
@@ -209,8 +230,16 @@ def get_color_from_string(color_str):
     return [int(c) for c in color_str.split(",")]
 
 
-def create_image(current_notes, time, time_left, time_right, time_before_current,
-                    time_after_current, pitch_min, pitch_max, config):
+def create_image(
+    current_notes,
+    time,
+    time_left,
+    time_before_current,
+    time_after_current,
+    pitch_min,
+    pitch_max,
+    config,
+):
     """
     For each frame, this function is called.
     The notes which appear in this image (current_notes) have
@@ -222,26 +251,23 @@ def create_image(current_notes, time, time_left, time_right, time_before_current
     color_active = get_color_from_string(config["color_active"])
     color_silent = get_color_from_string(config["color_silent"])
     bg_color = get_color_from_string(config["bg_color"])
-    pixels_to_remove_from_notes_x = float(
-        config["pixels_to_remove_from_notes_x"])
-    pixels_to_remove_from_notes_y = float(
-        config["pixels_to_remove_from_notes_y"])
+    pixels_to_remove_from_notes_x = float(config["pixels_to_remove_from_notes_x"])
+    pixels_to_remove_from_notes_y = float(config["pixels_to_remove_from_notes_y"])
 
     no_of_rows = pitch_max - pitch_min + 1
     row_height = (size_y - 2.0 * margin_y) / no_of_rows
     pixels_per_second = size_x / (time_before_current + time_after_current)
-    note_height = int(
-        round(max(1, row_height - pixels_to_remove_from_notes_y)))
+    note_height = int(round(max(1, row_height - pixels_to_remove_from_notes_y)))
     note_pos_y_offset = 0.5 * (row_height - note_height)
 
     img = create_empty_image(bg_color, size_x, size_y)
     for note in current_notes:
         row_no = note.pitch - pitch_min
-        y_pos = int(round(size_y - margin_y - (row_no + 1)
-                          * row_height + note_pos_y_offset))
-        x_pos = int(round((note.start_time - time_left) * pixels_per_second))
-        x_length = int(round((note.end_time - note.start_time)
-                             * pixels_per_second - pixels_to_remove_from_notes_x))
+        y_pos = size_y - margin_y - (row_no + 1) * row_height + note_pos_y_offset
+        x_pos = (note.start_time - time_left) * pixels_per_second
+        x_length = (
+            note.end_time - note.start_time
+        ) * pixels_per_second - pixels_to_remove_from_notes_x
 
         p1 = (x_pos, y_pos)
         p2 = (x_pos + x_length, y_pos + note_height)
@@ -249,8 +275,24 @@ def create_image(current_notes, time, time_left, time_right, time_before_current
             note_color = color_active
         else:
             note_color = color_silent
-        cv2.rectangle(img, p1, p2, note_color, -1)
+        draw_rectangle(img, p1, p2, note_color)
     return img
+
+
+def draw_rectangle(
+    img, p1, p2, color, thickness=cv2.FILLED, lineType=cv2.LINE_AA, shift=10
+):
+    p1 = (int(round(p1[0] * 2 ** shift)), int(round(p1[1] * 2 ** shift)))
+    p2 = (int(round(p2[0] * 2 ** shift)), int(round(p2[1] * 2 ** shift)))
+    cv2.rectangle(
+        img,
+        p1,
+        p2,
+        color,
+        thickness,
+        lineType,
+        shift,
+    )
 
 
 def is_note_active(note, time):
@@ -291,16 +333,17 @@ def main():
         "--config",
         required=False,
         default="options.cfg",
-        help="path to program options file")
+        help="path to program options file",
+    )
     arguments = vars(parser.parse_args())
     filename = arguments["config"]
     config = get_config(filename)["DEFAULT"]
 
     note_tracks, tempo_bpm, resolution = read_midi(config["midi_filename"])
     calculate_note_times(note_tracks, tempo_bpm, resolution)
-    create_video(note_tracks, config)
+    asyncio.run(create_video(note_tracks, config))
     shutil.rmtree("./tmp_images")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
